@@ -3,7 +3,7 @@ import socket
 import os
 import json
 from torrent import Torrent
-import Thread
+from threading import Thread
 
 
 piece_length=1

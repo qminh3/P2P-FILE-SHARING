@@ -34,13 +34,49 @@ def server_program(host, port):
 
 
 if __name__ == "__main__":
+    # thiết lập thông tin cho thằng peer2
     hostip = "127.0.0.1"  # Địa chỉ localhost
-    port = 8080  # Port để server lắng nghe
-    server_program(hostip, port)  # Khởi tạo server
-      # Đặt đường dẫn tới file cần chia
+    port = 8082  # Port để server lắng nghe
+    
+    #tạo file torrent
+    peer2=Torrent()
+    
+    #set up các thiết lập cơ bản cho peer2
+    
+    peer2.set_reacher_peer(hostip, port)  # IP và Port của Peer2
+    peer2.set_option(1)  # Option 1: Peer2 chỉ nhận dữ liệu
+    
+    #thiết lập thông tin đến tracker để lấy file
+    
+    file_info='info.txt'
+    file_data = peer2.get_tracker()
+    peer2.info_hash = peer2.get_tracker()  # Lấy thông tin tracker từ file info
+    
+    
+    try:
+        # gửi request đến tracker để lấy thông tin về các peers
+        selected_peers = peer2.request_peers_from_tracker()
+        if not selected_peers:
+            print("Không có peers khả dụng để tải file!")
+            exit()
+         # Hiển thị danh sách các peers nhận được
+        print(f"Danh sách các peers từ tracker: {selected_peers}")
+        # Bắt đầu tải file
+        output_file = "E:\p2p_file_sharing\received_file.txt"  # Tên file lưu sau khi tải về
+        peer2.download_file(output_file)
+        print(f"File đã tải về thành công và lưu tại: {output_file}")
+
+    except Exception as e:
+        print(f"Lỗi: {e}")
+        print("Không tìm thấy file!")
+    
+    
+    # Chạy server để sẵn sàng gửi file cho peers khác
+    print(f"Server Peer2 đang lắng nghe trên 127.0.0.1:8082...")
+    peer2.download_server(output_file="")  # Peer2 chạy server để hỗ trợ peers khác
 
 
 
 
 
-send_file(host, port, output_dir,sizepiece=1)
+# send_file(host, port, output_dir,sizepiece=1)

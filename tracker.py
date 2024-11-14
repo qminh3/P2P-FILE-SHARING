@@ -26,26 +26,12 @@ peer_dict = {}
 #     },
 #     ...
 # }
-
-# def remove_inactive_peers(timeout=300):  # Timeout mặc định là 300 giây
-#     current_time = time.time()
-#     for info_hash in list(peer_dict.keys()):
-#         peers = peer_dict[info_hash]["peers"]
-#         inactive_peers = [
-#             peer_id for peer_id, peer_data in peers.items()
-#             if current_time - peer_data["last_active"] > timeout
-#         ]
-#         for peer_id in inactive_peers:
-#             del peers[peer_id]
-#         # Nếu không còn peer nào cho info_hash, xóa luôn entry info_hash
-#         if not peers:
-#             del peer_dict[info_hash]
 def new_connection(conn):
 
     while True:
         data = conn.recv(1024).decode('utf-8')
         if not data:
-            time.sleep(1)  # Wait for 100ms before the next iteration
+            time.sleep(100)  # Wait for 100ms before the next iteration
             continue  
         message = json.loads(data)
         # đăng ký thông báo đối với tracker
@@ -79,6 +65,7 @@ def new_connection(conn):
             print(response)
            
             conn.send(json.dumps(response).encode()) # sends peer list
+            print(f"Dữ liệu trong peer_dict: {json.dumps(peer_dict, indent=4)}")
         elif (message['action'] == 'get_peers'): 
              
                 info_hash = message['info_hash']
@@ -87,7 +74,7 @@ def new_connection(conn):
                 else:
                     response = {'peers': {},
                                 "info":{}}
-                #conn.send(json.dumps(response).encode())
+                conn.send(json.dumps(response).encode())
         elif (message['action'] == 'completed'):
              info_hash = message['info_hash']
              if info_hash in peer_dict:
@@ -97,7 +84,7 @@ def new_connection(conn):
             response = "What do you say?"
             conn.send(json.dumps(response).encode('utf-8'))
 
-
+    
 
 def server_program(host, port):
     serversocket = socket.socket()

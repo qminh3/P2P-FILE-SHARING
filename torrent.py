@@ -3,7 +3,6 @@ import json
 import hashlib
 import bencodepy
 import socket
-import time
 PIECE_LENGTH = 1
 import random
 
@@ -49,8 +48,9 @@ def get_info_from_file(file_path,file_info):
  
 
 class Torrent ():
-    self.option = 1 
+    
     def __init__(self):
+        self.option = 1 
         self.info_hash: str = ''
         self.info={
             'total_size':"",
@@ -109,6 +109,9 @@ class Torrent ():
         self.peer_id.append(peer)
 
     def upload_file(self,file_path,file_info):
+        if not os.path.exists(file_path):
+            print(f"Không tìm thấy file: {file_path}")
+            return None
        #get info
         response=get_info_from_file(file_path,file_info)
         
@@ -181,7 +184,6 @@ class Torrent ():
                 client_socket.close()  # Đóng kết nối socket
                 print(f"Đã gửi file {data} tới {host}:{port}")
     def request_peers_from_tracker(self):
-   
         try:
             client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             client_socket.connect((self.urlTracker["ip"], self.urlTracker["port"]))
@@ -190,30 +192,29 @@ class Torrent ():
             request = {
                 "action": "get_peers",
                 "info_hash": self.info_hash,
-            }
+            }    
+               
             client_socket.send(json.dumps(request).encode())
             print("Đã gửi yêu cầu get_peers tới tracker")
-
+            
             # Nhận phản hồi từ tracker
             response_data = client_socket.recv(1024).decode()
+            print(f"Phản hồi từ tracker: {response_data}")
             response = json.loads(response_data)
-
-            print("Danh sách peers nhận được từ tracker:", response["peers"])
-
-            # Chọn peers dựa trên option
-            selected_peers = self.get_peers(response["peers"])
-            print(f"Peers được chọn: {selected_peers}")
-
-            return selected_peers
+            if(response and "peers" in response):
+                print(f"Danh sách peers từ tracker: {response['peers']}")
+                return response['peers']
+            else:
+                print("Không có peers nào trong phản hồi từ tracker.")
+                return []
 
         except Exception as e:
-            print(f"Lỗi khi kết nối tới tracker: {e}")
+            print(f"Lỗi kết nối tới tracker: {e}")
             return []
-
         finally:
             client_socket.close()
 
-          
+
 
     def download_server(self, output_file):
     # Create the server socket
@@ -248,9 +249,14 @@ class Torrent ():
             client_socket.close()  # Close the client connection
             server_socket.close()  # Close the server socket
     def download_file(self, output_file):
-        # """
+        
         # Tải file từ các peers được chọn.
-        # """
+        # M��i peer s�� gửi 1 mảnh file và server s�� ghi nó vào file output_file.
+
+        # Tìm peers dùng để tải file
+        # selected_peers = self.request_peers_from_tracker()
+        # if not selected_peers:
+        #     print("Không có peers nào khả dụng để tải file!")
         selected_peers = self.request_peers_from_tracker()
         if not selected_peers:
             print("Không có peers nào khả dụng để tải file!")
