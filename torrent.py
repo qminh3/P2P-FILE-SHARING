@@ -33,7 +33,7 @@ def get_info_from_file(file_path,file_info):
         
         info = {
             'total_size':len(file_data),
-            'number_of_pieces': len(file_data)//PIECE_LENGTH,
+            'number_of_pieces': len(file_data)//PIECE_LENGTH +1,
             'file_name':  os.path.basename(file_path),
             'piece_length': PIECE_LENGTH
         }
@@ -50,7 +50,7 @@ def get_info_from_file(file_path,file_info):
 class Torrent ():
     
     def __init__(self):
-        self.option = 1 
+        self.option = 1 # mặc định
         self.info_hash: str = ''
         self.info={
             'total_size':"",
@@ -112,8 +112,11 @@ class Torrent ():
         if not os.path.exists(file_path):
             print(f"Không tìm thấy file: {file_path}")
             return None
-       #get info
+       
+       #get info_hash của file 
+       
         response=get_info_from_file(file_path,file_info)
+       # cấu hình file s
         
         self.info=response["info"]
         urlTracker=response["urlTracker"]
@@ -142,7 +145,6 @@ class Torrent ():
         # Nhận phản hồi từ tracker
             response_data = client_socket.recv(1024).decode()  # Đọc dữ liệu phản hồi từ tracker
             response_json = json.loads(response_data)  # Giải mã (parse) dữ liệu JSON nhận được
-
             print("Dữ liệu nhận được từ tracker:", response_json)
             return response_json  # Trả về dữ liệu nhận được từ tracker
 
@@ -152,7 +154,27 @@ class Torrent ():
         # Đóng kết nối socket
             client_socket.close()
             print("Đã đóng kết nối đến tracker")
+            
+    # def send_file(self, request, folder_path):
+    #     """Gửi một mảnh dữ liệu tới peer"""
+    #     index = request["index"]
+    #     file_path = os.path.join(folder_path, self.info["file_name"])
 
+    #     with open(file_path, 'rb') as f:
+    #         f.seek(index * PIECE_LENGTH)
+    #         data = f.read(PIECE_LENGTH)
+
+    #     host = request["host"]
+    #     port = request["port"]
+    #     try:
+    #         client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    #         client_socket.connect((host, port))
+    #         client_socket.send(data)
+    #         print(f"Đã gửi mảnh {index} tới {host}:{port}")
+    #     except Exception as e:
+    #         print(f"Lỗi khi gửi mảnh {index}: {e}")
+    #     finally:
+    #         client_socket.close()
     def send_file(request,folder_path):
     # host, port,index,infohash
         host = request["host"]
@@ -184,21 +206,21 @@ class Torrent ():
                 client_socket.close()  # Đóng kết nối socket
                 print(f"Đã gửi file {data} tới {host}:{port}")
     def request_peers_from_tracker(self):
+        request = {
+            "action": "get_peers",
+            "info_hash": self.info_hash,
+        }
+        client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         try:
-            client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            client_socket.connect((self.urlTracker["ip"], self.urlTracker["port"]))
-
-            # Gửi yêu cầu "get_peers" tới tracker
-            request = {
-                "action": "get_peers",
-                "info_hash": self.info_hash,
-            }    
-               
+            # Kết nối đến tracker (ip và port của tracker)
+            client_socket.connect((self.urlTracker["ip"], self.urlTracker["port"])) 
             client_socket.send(json.dumps(request).encode())
             print("Đã gửi yêu cầu get_peers tới tracker")
             
             # Nhận phản hồi từ tracker
             response_data = client_socket.recv(1024).decode()
+            print(f"Phản hồi từ tracker: {response_data}")
+            response = json.loads(response_data)
             print(f"Phản hồi từ tracker: {response_data}")
             response = json.loads(response_data)
             if(response and "peers" in response):
