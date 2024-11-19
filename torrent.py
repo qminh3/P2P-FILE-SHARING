@@ -145,6 +145,7 @@ class Torrent:
                                     "action": "download",
                                     "index": piece_index
                                 }
+                                print(f"Downloading {piece_index}")
                                 client.send(json.dumps(request).encode())
                                 
                                 # # Nhận và ghi dữ liệu
