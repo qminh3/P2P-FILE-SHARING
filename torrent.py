@@ -133,38 +133,32 @@ class Torrent:
             piece_length = self.info.get("piece_length", 1)
             total_size = self.info.get("total_size",1)
             total_pieces = total_size//piece_length
-            with open(output_file, 'wb') as f:
-                for peer in peers:
+            print(f"{total_pieces}")
+            with open(output_file, "wb") as f:
+                for piece_index in range(total_pieces):  # Lặp qua các mảnh file
+                    # peer_index = 0 if piece_index % 2 == 0 else 1  # Chọn peer theo chẵn/lẻ
+                    peer = peers[0]  # Lấy thông tin peer tương ứng
+
                     try:
+                        # Kết nối tới peer
                         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as client:
-                            print(f"Kết nối tới peer {peer['ip']}:{peer['port']}")
+                            print(f"Kết nối tới peer {peer['ip']}:{peer['port']} để tải piece {piece_index}")
                             client.connect((peer["ip"], int(peer["port"])))
-                            
-                            for piece_index in range(total_pieces):
-                                request = {
-                                    "action": "download",
-                                    "index": piece_index
-                                }
-                                print(f"Downloading {piece_index}")
-                                client.send(json.dumps(request).encode())
-                                
-                                # # Nhận và ghi dữ liệu
-                                data = client.recv(piece_length)
-                                if data:
-                                    f.write(data)
-                                    print(f"Đã tải piece {piece_index} từ peer {peer['ip']}:{peer['port']}")
-                                else:
-                                    
-                                    print(f"Không nhận được dữ liệu cho piece {piece_index}")
-                                    
-                            print(f"Đã tải xong file từ peer {peer['ip']}:{peer['port']}")
-                            return True
-                            
+
+                            # Gửi yêu cầu tải mảnh file
+                            request = {
+                                "action": "sendFile",
+                                "index": piece_index,
+                                "peer_id_action":self.peer_id_action
+                            }
+                            client.send(json.dumps(request).encode())
+                            print(f"Đa gửi yêu cầu piece {piece_index} từ peer {peer['ip']}:{peer['port']}")
+
                     except Exception as e:
-                        print(f"Lỗi khi tải từ peer {peer['ip']}:{peer['port']}: {e}")
-                        continue
-                        
-            return False
+                        print(f"Lỗi khi tải piece {piece_index} từ peer {peer['ip']}:{peer['port']}: {e}")
+
+                            
+                return False
             
         except Exception as e:
             print(f"Lỗi khi tải file: {e}")
