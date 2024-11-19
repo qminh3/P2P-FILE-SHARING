@@ -7,49 +7,53 @@ from threading import Timer
 
 #danh sách chứa các thông tin về file và peer
 peer_dict = {}
-# theo đó ta có cấu trúc của peer_dict như sau
-# peer_dict = {
-#     "info_hash_1": {
+# Tracker đang chạy tại 127.0.0.1:8080
+# Kết nối từ ('127.0.0.1', 58231)
+# info upload
+# Đăng ký file với info_hash: b2d9a127555c5a390a1d8e6ef391050e836e3376
+# Cập nhật peer_dict: {
+#     "b2d9a127555c5a390a1d8e6ef391050e836e3376": {
 #         "peers": {
-#             "peer id": {
-#                 "ip": "192.168.1.1",
-#                 "port": "8081",
-#                 
-#             },
-#             ...
+#             "127.0.0.1:12345": {
+#                 "ip": "127.0.0.1",
+#                 "port": 12345
+#             }
 #         },
 #         "info": {
-#             "file_name": "...",
-#             "total_size": ...,
-#             ...
+#             "file_name": "port.txt",
+#             "total_size": 9,
+#             "number_of_pieces": 10,
+#             "piece_length": 1
 #         }
-#     },
-#     ...
+#     }
 # }
 def handle_upload_or_download(message, conn):
     """Xử lý hành động upload hoặc download"""
     info_hash = message['info_hash']
+    print(f"Tracker nhận yêu cầu upload với info_hash: {info_hash}")
     peer_ip = message['ip']
     peer_port = message['port']
     info = message.get("info", {})
     peer_id = f"{peer_ip}:{peer_port}"
-    print(f"info {info_hash}")
     # Cập nhật danh sách peers
-    # if info_hash not in peer_dict:
-    #     peer_dict[info_hash] = {"peers": {}, "info": info}
-    # peer_dict[info_hash]["peers"][peer_id] = {"ip": peer_ip, "port": peer_port}
-    # peer_dict[info_hash]["info"] = info
+    if info_hash not in peer_dict:
+        peer_dict[info_hash] = {"peers": {}, "info": info}
+    peer_dict[info_hash]["peers"][peer_id] = {"ip": peer_ip, "port": peer_port}
+    peer_dict[info_hash]["info"] = info
     
-    # print(f"Peer dict cập nhật: {json.dumps(peer_dict, indent=4)}")
-    # conn.send(json.dumps(peer_dict[info_hash]).encode())
+    print(f"Cập nhật peer_dict: {json.dumps(peer_dict, indent=4)}")
+    conn.send(json.dumps({"status": "success"}).encode())
 def handle_get_peers(message, conn):
-    """Xử lý hành động get_peers"""
     info_hash = message["info_hash"]
+    print(f"Tracker nhận yêu cầu get_peers với info_hash: {info_hash}")
     if info_hash in peer_dict:
-        response = peer_dict[info_hash]
+        response = {"peers": list(peer_dict[info_hash]["peers"].values()), "info": peer_dict[info_hash]["info"]}
     else:
-        response = {"peers": {}, "info": {}}
+        response = {"peers": [], "info": {}}
+    print(f"Phản hồi get_peers: {response}")
     conn.send(json.dumps(response).encode())
+
+
 def handle_completed(message, conn):
     """Xử lý hành động completed"""
     info_hash = message["info_hash"]
@@ -146,15 +150,13 @@ def server_program(host, port):
     serversocket = socket.socket()
     serversocket.bind((host, port))
     serversocket.listen(10)
+    print(f"Tracker đang chạy tại {host}:{port}")
     while True:
-        conn, addr = serversocket.accept() 
+        conn, addr = serversocket.accept()
         print(f"Kết nối từ {addr}")
-        nconn = Thread(target=new_connection, args=(conn,))
-        nconn.start()
+        Thread(target=new_connection, args=(conn,)).start()
 
 if __name__ == "__main__":
-    #hostname = socket.gethostname()
     hostip = "127.0.0.1"
     port = 8080
-    print("Tracker bắt đầu tại: {}:{}".format(hostip,port))
     server_program(hostip, port)
