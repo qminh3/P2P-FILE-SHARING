@@ -7,26 +7,6 @@ from threading import Timer
 
 #danh sách chứa các thông tin về file và peer
 peer_dict = {}
-# Tracker đang chạy tại 127.0.0.1:8080
-# Kết nối từ ('127.0.0.1', 58231)
-# info upload
-# Đăng ký file với info_hash: b2d9a127555c5a390a1d8e6ef391050e836e3376
-# Cập nhật peer_dict: {
-#     "b2d9a127555c5a390a1d8e6ef391050e836e3376": {
-#         "peers": {
-#             "127.0.0.1:12345": {
-#                 "ip": "127.0.0.1",
-#                 "port": 12345
-#             }
-#         },
-#         "info": {
-#             "file_name": "port.txt",
-#             "total_size": 9,
-#             "number_of_pieces": 10,
-#             "piece_length": 1
-#         }
-#     }
-# }
 def handle_upload_or_download(message, conn):
     """Xử lý hành động upload hoặc download"""
     info_hash = message['info_hash']
@@ -92,54 +72,6 @@ def new_connection(conn):
             else:
                 conn.send(json.dumps({"error": "Unknown action"}).encode())
             
-            # if(message['action'] == 'download' or message['action'] == 'upload'): 
-            #     info_hash = message['info_hash']
-            #     peer_ip = message['ip']
-            #     peer_port = message['port']
-            #     info=message.get["info",{}]
-            #     peer_id = f"ip: {peer_ip} port :{peer_port}" 
-            #     # peer_port = str(peer_port)
-            #     # kiểm tra xem peer đã tồn tại trong danh sách peer của file đó chưa
-            #     if(info_hash in peer_dict): 
-            #         peer_dict[info_hash]["peers"][peer_id] = {
-            #             "ip": peer_ip,
-            #             "port": peer_port,
-                    
-            #         }
-            #         peer_dict[info_hash]["info"]=info
-                
-            #     else:
-            #         peer_dict[info_hash] = {"peers": {}, "info":{}}
-            #         peer_dict[info_hash]["peers"][peer_id] = {
-            #             "ip": peer_ip,
-            #             "port": peer_port,
-                        
-            #         }
-            #         peer_dict[info_hash]["info"]=info
-
-            #     print("peer dict", peer_dict)
-            #     response = peer_dict[info_hash]
-            #     print(response)
-            
-            #     conn.send(json.dumps(response).encode()) # sends peer list
-            #     print(f"Dữ liệu trong peer_dict: {json.dumps(peer_dict, indent=4)}")
-            # elif (message['action'] == 'get_peers'): 
-                
-            #         info_hash = message['info_hash']
-            #         if info_hash in peer_dict:
-            #             response = peer_dict[info_hash]
-            #         else:
-            #             response = {'peers': {},
-            #                         "info":{}}
-            #         conn.send(json.dumps(response).encode()) # sends peer list
-            # elif (message['action'] == 'completed'):
-            #      info_hash = message['info_hash']
-            #      if info_hash in peer_dict:
-            #         peer_dict[info_hash]["downloads"] = peer_dict[info_hash].get("downloads", 0) + 1
-            #      conn.send(json.dumps({"status": "success"}).encode())
-            # else:
-            #     response = "What do you say?"
-            #     conn.send(json.dumps(response).encode('utf-8'))
     except Exception as e:
         print(f"Lỗi kết nối từ peer: {e}")
     finally:

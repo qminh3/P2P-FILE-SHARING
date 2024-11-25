@@ -3,6 +3,7 @@ import json
 import socket
 import hashlib
 import bencodepy
+from threading import Thread
 
 PIECE_LENGTH = 1
 def getInfoHash(info):
@@ -49,7 +50,7 @@ class Torrent:
     def set_tracker(self, url):
         self.urlTracker = url
 
-    def upload_file(self, file_path, file_info):
+    def upload_file(self, file_path):
         if not os.path.exists(file_path):
             print(f"Không tìm thấy file: {file_path}")
             return None
@@ -94,9 +95,9 @@ class Torrent:
         """
         Gửi yêu cầu tới tracker để lấy danh sách các peers nắm giữ file.
         """
-        if not self.info_hash:
-            print("info_hash không được thiết lập, không thể gửi yêu cầu get_peers.")
-            return None
+        # if not self.info_hash:
+        #     print("info_hash không được thiết lập, không thể gửi yêu cầu get_peers.")
+        #     return None
 
         request = {
             "action": "get_peers", 
@@ -119,11 +120,16 @@ class Torrent:
         except Exception as e:
             print(f"Lỗi khi yêu cầu danh sách peers từ tracker: {e}")
             return None
-    def download_file(self, output_file):
+    def download_file(self, file_name, piece_length, output_file):
+        # Thiết lập thông tin info_hash dựa trên tên file và piece_length
+        self.info = {"file_name": file_name, "piece_length": piece_length}
+        self.info_hash = hashlib.sha1(bencodepy.encode(self.info)).hexdigest()
         """Tải file từ các peers khả dụng"""
         response =self.request_peers_from_tracker()
-        print("ok response")
-        peers = response["peers"]
+        if not response:
+            print("Không nhận được phản hồi từ tracker.")
+            return False
+        peers = response["peers"]        
         self.info=response["info"]
         if not peers:
             print("Không tìm thấy peers nào khả dụng để tải file.")
@@ -133,11 +139,11 @@ class Torrent:
             piece_length = self.info.get("piece_length", 1)
             total_size = self.info.get("total_size",1)
             total_pieces = total_size//piece_length
-            print(f"{total_pieces}")
+            print(f"Tổng số mảnh file cần tải: {total_pieces}")
             with open(output_file, "wb") as f:
                 for piece_index in range(total_pieces):  # Lặp qua các mảnh file
                     # peer_index = 0 if piece_index % 2 == 0 else 1  # Chọn peer theo chẵn/lẻ
-                    peer = peers[0]  # Lấy thông tin peer tương ứng
+                    peer = peers[0]  #  Chọn peer đầu tiên từ danh sách
 
                     try:
                         # Kết nối tới peer
@@ -163,6 +169,84 @@ class Torrent:
         except Exception as e:
             print(f"Lỗi khi tải file: {e}")
             return False
+        print(f"File sẽ được lưu trong thư mục: {os.path.dirname(output_file)}")
+
+    def download_file_from_multiple_peers(self, file_name, piece_length, output_file):
+        print(f"File sẽ được lưu trong thư mục: {os.path.dirname(output_file)}")
+
+        # Thiết lập thông tin info_hash dựa trên tên file và piece_length
+        self.info = {"file_name": file_name, "piece_length": piece_length}
+        self.info_hash = hashlib.sha1(bencodepy.encode(self.info)).hexdigest()
+        
+        # Yêu cầu danh sách peers từ tracker
+        response = self.request_peers_from_tracker()
+        if not response:
+            print("Không nhận được phản hồi từ tracker.")
+            return False
+
+        peers = response["peers"]
+        self.info = response["info"]
+        if not peers:
+            print("Không tìm thấy peers nào khả dụng để tải file.")
+            return False
+
+        try:
+            total_size = self.info["total_size"]
+            total_pieces = (total_size + piece_length - 1) // piece_length  # Tính tổng số mảnh
+            print(f"Tổng số mảnh file cần tải: {total_pieces}")
+
+            # Tạo file kết quả với kích thước bằng tổng kích thước file
+            with open(output_file, "wb") as f:
+                f.truncate(total_size)  # Đặt kích thước file để có đủ không gian cho các mảnh
+
+            # Tạo danh sách các luồng tải file
+            threads = []
+            for piece_index in range(total_pieces):
+                peer_index = piece_index % len(peers)  # Chọn peer dựa trên chỉ số mảnh
+                peer = peers[peer_index]
+                thread = Thread(
+                    target=self.download_piece,
+                    args=(peer, piece_index, piece_length, output_file)
+                )
+                threads.append(thread)
+                thread.start()
+
+            # Chờ tất cả các luồng hoàn thành
+            for thread in threads:
+                thread.join()
+
+            print(f"Tải file hoàn tất.")
+            return True
+
+        except Exception as e:
+            print(f"Lỗi khi tải file: {e}")
+            return False
+      
+    def download_piece(self, peer, piece_index, piece_length, output_file):
+        try:
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as client:
+                print(f"Kết nối tới peer {peer['ip']}:{peer['port']} để tải piece {piece_index}")
+                client.connect((peer["ip"], int(peer["port"])))
+
+                # Gửi yêu cầu tải mảnh file
+                request = {
+                    "action": "sendFile",
+                    "index": piece_index,
+                    "peer_id_action": self.peer_id_action
+                }
+                client.send(json.dumps(request).encode())
+
+                # Nhận dữ liệu mảnh file
+                data = client.recv(piece_length)
+                print(f"Đã nhận được piece {piece_index} ({len(data)} bytes) từ peer {peer['ip']}:{peer['port']}")
+
+                # Ghi dữ liệu vào đúng vị trí trong file
+                with open(output_file, "r+b") as f:
+                    f.seek(piece_index * piece_length)  # Đến vị trí của mảnh
+                    f.write(data)  # Ghi dữ liệu mảnh
+
+        except Exception as e:
+            print(f"Lỗi khi tải piece {piece_index} từ peer {peer['ip']}:{peer['port']}: {e}")
 
     def download_server(self, output_file):
         host = self.peer_id_action["ip"]
