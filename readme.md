@@ -1,21 +1,31 @@
-## P2P File Sharing 
-#### an implementation of the peer-to-peer file sharing done with python 3.6
 
-Mô hình P2P FILE SHARING FROM WITH LOVE
+## Để chạy projet
 
-Cần chạy tracker với các lệnh như sau:
-python tracker.py
-Sau đó là peer upload file :
-python peer.py
-Chọn chế độ (1: Upload, 2: Download): 1
-Nhập port cho peer server: 8001
-Nhập đường dẫn file để upload: E:\p2p_file_sharing\port.txt
+### Đầu tiên cần chạy tracker
 
+To run tracker , run the following command
 
-PS E:\p2p_file_sharing> python peer.py
-Chọn chế độ (1: Upload, 2: Download): 2
-Nhập port cho peer server: 8002
-Nhập tên của file cần tải: port.txt
-Nhập piece_length: 1
-Nhập tên file để lưu: kq.txt
-[Tracker] Yêu cầu danh sách peers...
+```bash
+  python tracker.py
+```
+To run peer for upload , run the following command
+
+```python
+  python peer.py
+  # Chọn chế độ (1: Upload, 2: Download): 1
+  # Nhập port cho peer server:
+  # Nhập đường dẫn file để upload: E:\p2p_file_sharing\port.txt
+```
+To run peer for download , run the following command
+```python
+  python peer.py
+  # Chọn chế độ (1: Upload, 2: Download): 2
+  # Nhập port cho peer server:
+  # Nhập tên của file cần tải: port.txt
+  # Nhập piece_length: 1
+  # Nhập tên file để lưu: ketqua.txt
+  # Chọn phương thức tải file:
+  # 1. Tải file từ một peer
+  # 2. Tải file từ nhiều peers
+  # Nhập lựa chọn (1/2):
+```

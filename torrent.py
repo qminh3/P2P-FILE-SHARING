@@ -52,7 +52,7 @@ class Torrent:
 
     def upload_file(self, file_path):
         if not os.path.exists(file_path):
-            print(f"Không tìm thấy file: {file_path}")
+            print(f"[Tracker] Không tìm thấy file: {file_path}")
             return None
 
         with open(file_path, 'rb') as f:
@@ -62,7 +62,7 @@ class Torrent:
         self.info = {
             "file_name": os.path.basename(file_path),
             "total_size": len(file_data),
-            "number_of_pieces": len(file_data) // PIECE_LENGTH + 1,
+            "number_of_pieces": len(file_data) // PIECE_LENGTH ,
             "piece_length": PIECE_LENGTH
         }
        
@@ -71,7 +71,7 @@ class Torrent:
             "file_name": os.path.basename(file_path),
             "piece_length": PIECE_LENGTH
         })).hexdigest()
-        print(f"Peer info_hash: {self.info_hash}")
+        print(f" [Peer]  info_hash: {self.info_hash}")
 
         info_action = {
             "action": "upload",
@@ -88,22 +88,20 @@ class Torrent:
                 response = json.loads(client.recv(1024).decode())
                 return response
         except Exception as e:
-            print(f"Lỗi kết nối tới tracker: {e}")
+            print(f"[Tracker] Lỗi kết nối tới tracker: {e}")
             return None
 
     def request_peers_from_tracker(self):
-        """
-        Gửi yêu cầu tới tracker để lấy danh sách các peers nắm giữ file.
-        """
-        # if not self.info_hash:
-        #     print("info_hash không được thiết lập, không thể gửi yêu cầu get_peers.")
-        #     return None
-
+        
+        
+        if not self.info_hash:
+            print("[Tracker] info_hash không được thiết lập || không thể gửi yêu cầu get_peers")
+            
         request = {
             "action": "get_peers", 
             "info_hash": self.info_hash
         }
-        # print(f"Gửi yêu cầu get_peers với info_hash: {self.info_hash}")
+        print(f"[ Peer ] gửi yêu cầu get_peers với info_hash: {self.info_hash}")
         
         try:
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as client:
@@ -111,44 +109,45 @@ class Torrent:
                 client.send(json.dumps(request).encode())
                 response_data = client.recv(1024).decode()
                 response = json.loads(response_data)
-                # print(f"Phản hồi từ tracker: {response}")
-                
                 if "peers" in response:
                     return response  # Trả về response
-                return None
+                # return None
                 
         except Exception as e:
-            print(f"Lỗi khi yêu cầu danh sách peers từ tracker: {e}")
+            print(f"[ Peer ] Lỗi khi yêu cầu danh sách peers từ tracker: {e}")
             return None
     def download_file(self, file_name, piece_length, output_file):
+        
         # Thiết lập thông tin info_hash dựa trên tên file và piece_length
+        
         self.info = {"file_name": file_name, "piece_length": piece_length}
         self.info_hash = hashlib.sha1(bencodepy.encode(self.info)).hexdigest()
+        
         """Tải file từ các peers khả dụng"""
+        
         response =self.request_peers_from_tracker()
         if not response:
-            print("Không nhận được phản hồi từ tracker.")
+            print("[ Peer ] không nhận được phản hồi từ tracker.")
             return False
         peers = response["peers"]        
         self.info=response["info"]
         if not peers:
-            print("Không tìm thấy peers nào khả dụng để tải file.")
+            print("[ Tracker ] không tìm thấy peers nào khả dụng để tải file.")
             return False
 
         try:
             piece_length = self.info.get("piece_length", 1)
             total_size = self.info.get("total_size",1)
             total_pieces = total_size//piece_length
-            print(f"Tổng số mảnh file cần tải: {total_pieces}")
+            print(f"[ Peer ] tổng số mảnh file cần tải: {total_pieces}")
             with open(output_file, "wb") as f:
                 for piece_index in range(total_pieces):  # Lặp qua các mảnh file
-                    # peer_index = 0 if piece_index % 2 == 0 else 1  # Chọn peer theo chẵn/lẻ
                     peer = peers[0]  #  Chọn peer đầu tiên từ danh sách
 
                     try:
                         # Kết nối tới peer
                         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as client:
-                            print(f"Kết nối tới peer {peer['ip']}:{peer['port']} để tải piece {piece_index}")
+                            print(f"[ Peer ] 11`kết nối tới peer {peer['ip']}:{peer['port']} để tải piece {piece_index}")
                             client.connect((peer["ip"], int(peer["port"])))
 
                             # Gửi yêu cầu tải mảnh file
@@ -158,42 +157,47 @@ class Torrent:
                                 "peer_id_action":self.peer_id_action
                             }
                             client.send(json.dumps(request).encode())
-                            print(f"Đa gửi yêu cầu piece {piece_index} từ peer {peer['ip']}:{peer['port']}")
+                            print(f"[ Peer ] gửi yêu cầu piece {piece_index} từ peer {peer['ip']}:{peer['port']}")
 
                     except Exception as e:
                         print(f"Lỗi khi tải piece {piece_index} từ peer {peer['ip']}:{peer['port']}: {e}")
-
                             
                 return False
             
         except Exception as e:
             print(f"Lỗi khi tải file: {e}")
             return False
-        print(f"File sẽ được lưu trong thư mục: {os.path.dirname(output_file)}")
+        print(f"[ Peer ]File sẽ được lưu trong thư mục: {os.path.dirname(output_file)}")
 
     def download_file_from_multiple_peers(self, file_name, piece_length, output_file):
-        print(f"File sẽ được lưu trong thư mục: {os.path.dirname(output_file)}")
-
+        
+        if not file_name or piece_length <= 0:
+            raise ValueError("[ Peer ] tên file không chính xác && độ dài không hợp lệ")
+        
         # Thiết lập thông tin info_hash dựa trên tên file và piece_length
+        
         self.info = {"file_name": file_name, "piece_length": piece_length}
         self.info_hash = hashlib.sha1(bencodepy.encode(self.info)).hexdigest()
         
         # Yêu cầu danh sách peers từ tracker
         response = self.request_peers_from_tracker()
         if not response:
-            print("Không nhận được phản hồi từ tracker.")
+            print("[ Peer ] Không nhận được phản hồi từ tracker.")
             return False
 
         peers = response["peers"]
         self.info = response["info"]
         if not peers:
-            print("Không tìm thấy peers nào khả dụng để tải file.")
+            print("[ Tracker ] không tìm thấy peers nào khả dụng để tải file.")
             return False
 
         try:
-            total_size = self.info["total_size"]
+            piece_length = self.info.get("piece_length", 1)
+            total_size = self.info.get("total_size",1)
+            
+            
             total_pieces = (total_size + piece_length - 1) // piece_length  # Tính tổng số mảnh
-            print(f"Tổng số mảnh file cần tải: {total_pieces}")
+            print(f"[ Peer ] tổng số mảnh file cần tải: {total_pieces}")
 
             # Tạo file kết quả với kích thước bằng tổng kích thước file
             with open(output_file, "wb") as f:
@@ -215,11 +219,11 @@ class Torrent:
             for thread in threads:
                 thread.join()
 
-            print(f"Tải file hoàn tất.")
+            print(f"[ Peer ] Tải file hoàn tất.")
             return True
 
         except Exception as e:
-            print(f"Lỗi khi tải file: {e}")
+            print(f"[ Peer ] Lỗi khi tải file: {e}")
             return False
       
     def download_piece(self, peer, piece_index, piece_length, output_file):
@@ -235,15 +239,8 @@ class Torrent:
                     "peer_id_action": self.peer_id_action
                 }
                 client.send(json.dumps(request).encode())
+                print(f"[ Peer ] gửi yêu cầu piece {piece_index} từ peer {peer['ip']}:{peer['port']}")
 
-                # Nhận dữ liệu mảnh file
-                data = client.recv(piece_length)
-                print(f"Đã nhận được piece {piece_index} ({len(data)} bytes) từ peer {peer['ip']}:{peer['port']}")
-
-                # Ghi dữ liệu vào đúng vị trí trong file
-                with open(output_file, "r+b") as f:
-                    f.seek(piece_index * piece_length)  # Đến vị trí của mảnh
-                    f.write(data)  # Ghi dữ liệu mảnh
 
         except Exception as e:
             print(f"Lỗi khi tải piece {piece_index} từ peer {peer['ip']}:{peer['port']}: {e}")
@@ -254,9 +251,9 @@ class Torrent:
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as server:
             server.bind((host, port))
             server.listen(5)
-            print(f"Peer server đang lắng nghe tại {host}:{port}")
+            print(f"[ Peer ] server đang lắng nghe tại {host}:{port}")
             conn, addr = server.accept()
-            print(f"Kết nối từ {addr}")
+            print(f"[ Peer ] kết nối từ {addr}")
             with open(output_file, 'rb') as f:
                 while (data := f.read(1024)):
                     conn.send(data)

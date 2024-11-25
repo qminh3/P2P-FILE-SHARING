@@ -6,6 +6,7 @@ from torrent import Torrent
 import base64
 import bencodepy
 PIECE_LENGTH = 1 # Chỉnh lại chiều dài mảnh file
+
 def new_connection(conn, file_path,output_file):
     """Xử lý kết nối từ một peer mới"""
     try:
@@ -26,7 +27,7 @@ def new_connection(conn, file_path,output_file):
                     ip = peer_id_action["ip"]
                     port = peer_id_action["port"]
                     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as client:
-                        print(f"Kết nối tới peer {ip}:{port} để gửi piece {index}")
+                        print(f"[ Peer ] kết nối tới peer {ip}:{port} để gửi piece {index}")
                         client.connect((ip, int(port)))
 
                         # Gửi yêu cầu nhận mảnh file
@@ -41,7 +42,7 @@ def new_connection(conn, file_path,output_file):
                 except Exception as e:
                     print(f"Lỗi khi gửi piece {index}: {e}")
 
-                print(f"Đã gửi mảnh {index} của file.")
+                print(f"[ Peer ] đã gửi mảnh {index} của file.")
             else:
                 print("Không có dữ liệu để gửi.")
                 # Không cần tạo client nếu không có dữ liệu
@@ -60,7 +61,7 @@ def new_connection(conn, file_path,output_file):
                     file.seek(offset)  # Di chuyển đến vị trí đúng của mảnh trong file
                     file.write(decoded_data)  # Ghi dữ liệu vào vị trí đó
 
-                print(f"Đã ghi mảnh {index} vào vị trí {offset} trong file.")
+                print(f"[ Peer ] đã ghi mảnh {index} vào vị trí {offset} trong file.")
             else:
                 print("Không nhận được dữ liệu cho mảnh.")
 
@@ -80,16 +81,17 @@ def server_program(host, port, file_path,output_file):
         serversocket = socket.socket()
         serversocket.bind((host, port))  # Lắng nghe trên host và port
         serversocket.listen(10)  # Tối đa 10 kết nối đồng thời
-        print(f"Server listening on {host}:{port}")
+        print(f"[ Peer ] server listening on {host}:{port}")
         
         while True:
             conn, addr = serversocket.accept()  # Chấp nhận kết nối từ peers
-            print(f"Connection from {addr}")  # In ra địa chỉ của peer kết nối
+            # print(f"Connection from {addr}")  # In ra địa chỉ của peer kết nối
             thread = Thread(target=new_connection, args=(conn, file_path,output_file))  # Tạo luồng mới để xử lý kết nối
             thread.start()  # Bắt đầu luồng mới
     except Exception as e:
         print(f"Lỗi server: {e}")
 if __name__ == "__main__":
+    
     print("Chọn chế độ (1: Upload, 2: Download): ", end="")
     mode = int(input())
     print("Nhập port cho peer server: ", end="")
@@ -102,14 +104,13 @@ if __name__ == "__main__":
     if mode == 1:
         print("Nhập đường dẫn file để upload: ", end="")
         file_path = input()
-        # print("Nhập đường dẫn file info (metadata): ", end="")
-        # file_info = input()
+        
         output_file = "uploaded_" + os.path.basename(file_path)  # Tạo tên file output mặc định
         response = peer.upload_file(file_path)
         if response:
             print(f"File đã được upload: {response}")
         server_program(host, port, file_path,output_file)
-        # Thread(target=server_program, args=(host, port, file_path,output_file)).start()
+        
     elif mode == 2:
         # Đường dẫn thư mục Result
         result_folder = "Result"
