@@ -147,7 +147,7 @@ class Torrent:
                     try:
                         # Kết nối tới peer
                         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as client:
-                            print(f"[ Peer ] 11`kết nối tới peer {peer['ip']}:{peer['port']} để tải piece {piece_index}")
+                            print(f"[ Peer ] kết nối tới peer {peer['ip']}:{peer['port']} để tải piece {piece_index}")
                             client.connect((peer["ip"], int(peer["port"])))
 
                             # Gửi yêu cầu tải mảnh file
