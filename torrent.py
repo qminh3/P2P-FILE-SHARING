@@ -6,6 +6,7 @@ import bencodepy
 from threading import Thread
 
 PIECE_LENGTH = 1
+
 def getInfoHash(info):
     bencoded_info = bencodepy.encode(info)
     info_hash = hashlib.sha1(bencoded_info).hexdigest()
@@ -116,7 +117,7 @@ class Torrent:
         except Exception as e:
             print(f"[ Peer ] Lỗi khi yêu cầu danh sách peers từ tracker: {e}")
             return None
-    def download_file(self, file_name, piece_length, output_file):
+    def download_file_single(self, file_name, piece_length, output_file):
         
         # Thiết lập thông tin info_hash dựa trên tên file và piece_length
         
@@ -136,8 +137,8 @@ class Torrent:
             return False
 
         try:
-            piece_length = self.info.get("piece_length", 1)
-            total_size = self.info.get("total_size",1)
+            piece_length = self.info.get("piece_length")
+            total_size = self.info.get("total_size")
             total_pieces = total_size//piece_length
             print(f"[ Peer ] tổng số mảnh file cần tải: {total_pieces}")
             with open(output_file, "wb") as f:
@@ -167,7 +168,7 @@ class Torrent:
         except Exception as e:
             print(f"Lỗi khi tải file: {e}")
             return False
-        print(f"[ Peer ]File sẽ được lưu trong thư mục: {os.path.dirname(output_file)}")
+        
 
     def download_file_from_multiple_peers(self, file_name, piece_length, output_file):
         
@@ -244,17 +245,3 @@ class Torrent:
 
         except Exception as e:
             print(f"Lỗi khi tải piece {piece_index} từ peer {peer['ip']}:{peer['port']}: {e}")
-
-    def download_server(self, output_file):
-        host = self.peer_id_action["ip"]
-        port = int(self.peer_id_action["port"])
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as server:
-            server.bind((host, port))
-            server.listen(5)
-            print(f"[ Peer ] server đang lắng nghe tại {host}:{port}")
-            conn, addr = server.accept()
-            print(f"[ Peer ] kết nối từ {addr}")
-            with open(output_file, 'rb') as f:
-                while (data := f.read(1024)):
-                    conn.send(data)
-            conn.close()

@@ -28,13 +28,13 @@ def handle_upload_or_download(message, conn):
     peer_dict[info_hash]["peers"][peer_id] = {"ip": peer_ip, "port": peer_port}
     peer_dict[info_hash]["info"] = info
     
-    print(f"[Tracker] 2Cập nhật peer_dict: {json.dumps(peer_dict, indent=4)}")
+    print(f"[Tracker] Cập nhật peer_dict: {json.dumps(peer_dict, indent=4)}")
     conn.send(json.dumps({"status": "success"}).encode())
     
    #Hàm lấy thông tin của các peer đang giữ file    
 def handle_get_peers(message, conn):
     info_hash = message["info_hash"]
-    print(f"[Tracker] nhận yêu cầu get_peers với inf`o_hash: {info_hash}")
+    print(f"[Tracker] nhận yêu cầu get_peers với info_hash: {info_hash}")
     if info_hash in peer_dict:
         response = {"peers": list(peer_dict[info_hash]["peers"].values()), "info": peer_dict[info_hash]["info"]}
     else:
@@ -43,14 +43,12 @@ def handle_get_peers(message, conn):
     conn.send(json.dumps(response).encode())
 
     """Xử lý hành động completed"""
-def handle_completed(message, conn):
+# def handle_completed(message, conn):
     
-    info_hash = message["info_hash"]
-    if info_hash in peer_dict:
-        peer_dict[info_hash]["downloads"] = peer_dict[info_hash].get("downloads", 0) + 1
-    conn.send(json.dumps({"status": "success"}).encode())
-
-
+#     info_hash = message["info_hash"]
+#     if info_hash in peer_dict:
+#         peer_dict[info_hash]["downloads"] = peer_dict[info_hash].get("downloads", 0) + 1
+#     conn.send(json.dumps({"status": "success"}).encode())
 
 def new_connection(conn):
     try:
@@ -75,8 +73,8 @@ def new_connection(conn):
                 
             elif action == "get_peers":
                 handle_get_peers(message, conn)
-            elif action == "completed":
-                handle_completed(message, conn)
+            # elif action == "completed":
+            #     handle_completed(message, conn)
             else:
                 conn.send(json.dumps({"error": "Unknown action"}).encode())
             

@@ -5,7 +5,9 @@ from threading import Thread
 from torrent import Torrent
 import base64
 import bencodepy
-PIECE_LENGTH = 1 # Chỉnh lại chiều dài mảnh file
+
+
+PIECE_LENGTH = 1 # Set chiều dài mảnh file mặc định
 
 def new_connection(conn, file_path,output_file):
     """Xử lý kết nối từ một peer mới"""
@@ -92,10 +94,10 @@ def server_program(host, port, file_path,output_file):
         print(f"Lỗi server: {e}")
 if __name__ == "__main__":
     
-    print("Chọn chế độ (1: Upload, 2: Download): ", end="")
-    mode = int(input())
     print("Nhập port cho peer server: ", end="")
     port = int(input())
+    print("Chọn chế độ (1: Upload, 2: Download): ", end="")
+    mode = int(input())
     host = "127.0.0.1"
     peer = Torrent()
     peer.set_reacher_peer(host, port)
@@ -132,7 +134,7 @@ if __name__ == "__main__":
         download_method = int(input())
         if download_method == 1 :
                     # Tải file từ 1 peer
-                    if peer.download_file(file_name, piece_length, output_file):
+                    if peer.download_file_single(file_name, piece_length, output_file):
                         print(f"File đã tải về thành công tại: {output_file}")
                     else:
                         print("Không thể tải file. Đảm bảo rằng các peers đã đăng ký file này.")
